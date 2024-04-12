@@ -36,6 +36,8 @@ class Assistant:
         self.__is_login = False
         self.__is_blackboard_login = False
 
+        self.__JSESSIONID_DUE_ASSIGNMENTS = None
+
         self.login()
 
 
@@ -48,6 +50,7 @@ class Assistant:
         self.__session.cookies.clear()
         self.__is_login = False
         self.__is_blackboard_login = False
+        self.__JSESSIONID_DUE_ASSIGNMENTS = None
         logger.debug("Logout success")
 
 
@@ -66,7 +69,6 @@ class Assistant:
             if "统一身份认证平台" not in resp.text:
                 logger.error("Login failed")
                 raise LoginError("Login Error")
-        self.__session.cookies.update(resp.cookies)
         logger.debug("Getting execution value")
         execution = re.search(
             r'<input type="hidden" name="execution" value="(.*?)" />',
@@ -96,7 +98,6 @@ class Assistant:
             raise LoginError("Login failed: Wrong username or password")
 
         # update cookies
-        self.__session.cookies.update(resp.cookies)
 
         self.__is_login = True
 
@@ -117,12 +118,12 @@ class Assistant:
 
         # login Blackboard
         resp = self.__session.get("https://zjuam.zju.edu.cn/cas/login?service=https://learn.intl.zju.edu.cn/webapps/bb-ssocas-BBLEARN/index.jsp&locale=zh_CN")
-        self.__session.cookies.update(resp.cookies)
         resp = self.__session.post(
             "https://learn.intl.zju.edu.cn/webapps/bb-ssocas-BBLEARN/execute/authValidate/customLogin",
             data={"username": self.__username}
         )
-        self.__session.cookies.update(resp.cookies)
+
+        self.__JSESSIONID_DUE_ASSIGNMENTS = self.__session.cookies.get_dict()["JSESSIONID"]
 
         self.__is_blackboard_login = True
 
@@ -144,7 +145,7 @@ class Assistant:
 
         url = "https://learn.intl.zju.edu.cn/webapps/portal/dwr_open/call/plaincall/NautilusViewService.getViewInfoWithLimit.dwr"
         data = constants.GET_BB_DUE_ASSIGNMENTS_PAYLOAD.copy()
-        data["httpSessionId"] = self.__session.cookies.get_dict()["JSESSIONID"]
+        data["httpSessionId"] = self.__JSESSIONID_DUE_ASSIGNMENTS
         data["scriptSessionId"] = login_utils.getScriptSessionId()
 
         logger.debug(f"Requesting {url}")
@@ -153,6 +154,9 @@ class Assistant:
             logger.error(f"Request failed, status code: {resp.status_code}")
             logger.error(resp.text)
             raise Exception(f"Request failed, status code: {resp.status_code}")
+
+        with open("log.html", "w", encoding="utf-8") as f:
+            f.write(resp.text)
 
         # remove empty lines
         lines = list(filter(lambda x: x != "", resp.text.splitlines()))
@@ -263,7 +267,6 @@ class Assistant:
         logger.debug("Getting JSESSIONID")
         url = "https://learn.intl.zju.edu.cn/webapps/streamViewer/streamViewer?cmd=view&streamName=alerts&globalNavigation=false"
         resp = self.__session.get(url)
-        self.__session.cookies.update(resp.cookies)
 
         # get announcements
         print("Fetching announcements, this may take a while...")
@@ -272,7 +275,6 @@ class Assistant:
         url = "https://learn.intl.zju.edu.cn/webapps/streamViewer/streamViewer"
         data = constants.GET_BB_ANNOUNCEMENTS_PAYLOAD.copy()
         resp = self.__session.post(url, data=data)
-        self.__session.cookies.update(resp.cookies)
 
         logger.debug("Updating request data")
         data["prviders"] = resp.json()["sv_providers"][0]
@@ -282,7 +284,6 @@ class Assistant:
         while resp.json()["sv_moreData"]:
             logger.debug("Polling")
             resp = self.__session.post(url, data=data)
-            self.__session.cookies.update(resp.cookies)
             time.sleep(1)
         logger.debug("Data fetched")
 
