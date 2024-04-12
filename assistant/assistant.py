@@ -2,8 +2,10 @@ import logging
 import re
 import datetime
 import time
+import inspect
 
 import requests
+import requests.cookies
 import rsa
 
 # import login_utils
@@ -32,13 +34,24 @@ class Assistant:
 
         self.__username = username
         self.__password = password
-        self.__session = requests.Session()
         self.__is_login = False
         self.__is_blackboard_login = False
-
-        self.__JSESSIONID_DUE_ASSIGNMENTS = None
+        self.__cookie_jars: dict[str, requests.cookies.RequestsCookieJar] = {}
 
         self.login()
+
+    def __get_cookie_jar(self, base: str = None) -> requests.cookies.RequestsCookieJar:
+        """
+        Get cookie jar
+        """
+
+        key = inspect.currentframe().f_back.f_code.co_name
+        if key not in self.__cookie_jars:
+            if base is None:
+                self.__cookie_jars[key] = requests.cookies.RequestsCookieJar()
+            else:
+                self.__cookie_jars[key] = self.__cookie_jars[base].copy()
+        return self.__cookie_jars[key]
 
 
     def logout(self):
@@ -47,10 +60,9 @@ class Assistant:
         """
 
         logger.debug("Start logout")
-        self.__session.cookies.clear()
+        self.__cookie_jars: dict[str, requests.cookies.RequestsCookieJar] = {}
         self.__is_login = False
         self.__is_blackboard_login = False
-        self.__JSESSIONID_DUE_ASSIGNMENTS = None
         logger.debug("Logout success")
 
 
@@ -60,12 +72,16 @@ class Assistant:
         """
 
         logger.debug("Start login using zjuam")
+
+        session = requests.Session()
+        session.cookies = self.__get_cookie_jar()
+
         # get execution value
-        resp = self.__session.get("https://zjuam.zju.edu.cn/cas/login")
+        resp = session.get("https://zjuam.zju.edu.cn/cas/login")
         if "统一身份认证平台" not in resp.text:
             logger.debug("Already login, try to logout first")
             self.logout()
-            resp = self.__session.get("https://zjuam.zju.edu.cn/cas/login")
+            resp = session.get("https://zjuam.zju.edu.cn/cas/login")
             if "统一身份认证平台" not in resp.text:
                 logger.error("Login failed")
                 raise LoginError("Login Error")
@@ -75,14 +91,14 @@ class Assistant:
             resp.text
         ).group(1)
         logger.debug("Getting public key")
-        keyResp = self.__session.get("https://zjuam.zju.edu.cn/cas/v2/getPubKey").json()
+        keyResp = session.get("https://zjuam.zju.edu.cn/cas/v2/getPubKey").json()
         Modulus = keyResp["modulus"]
         public_exponent = keyResp["exponent"]
         key = rsa.PublicKey(int(Modulus, 16), int(public_exponent, 16))
         encrypedPwd = login_utils.encrypt(self.__password.encode(), key)
         
         logger.debug("Login with zjuam using username, encrypted password and execution value")
-        resp = self.__session.post(
+        resp = session.post(
             "https://zjuam.zju.edu.cn/cas/login",
             data={
                 "username": self.__username,
@@ -96,8 +112,6 @@ class Assistant:
         if "统一身份认证平台" in resp.text:
             logger.error("Login failed: Wrong username or password")
             raise LoginError("Login failed: Wrong username or password")
-
-        # update cookies
 
         self.__is_login = True
 
@@ -116,14 +130,15 @@ class Assistant:
         if not self.__is_login:
             raise LoginError("Login to zjuam failed")
 
+        session = requests.Session()
+        session.cookies = self.__get_cookie_jar("login")
+
         # login Blackboard
-        resp = self.__session.get("https://zjuam.zju.edu.cn/cas/login?service=https://learn.intl.zju.edu.cn/webapps/bb-ssocas-BBLEARN/index.jsp&locale=zh_CN")
-        resp = self.__session.post(
+        resp = session.get("https://zjuam.zju.edu.cn/cas/login?service=https://learn.intl.zju.edu.cn/webapps/bb-ssocas-BBLEARN/index.jsp&locale=zh_CN")
+        resp = session.post(
             "https://learn.intl.zju.edu.cn/webapps/bb-ssocas-BBLEARN/execute/authValidate/customLogin",
             data={"username": self.__username}
         )
-
-        self.__JSESSIONID_DUE_ASSIGNMENTS = self.__session.cookies.get_dict()["JSESSIONID"]
 
         self.__is_blackboard_login = True
 
@@ -143,20 +158,20 @@ class Assistant:
         if not self.__is_blackboard_login:
             raise LoginError("Login to Blackboard failed")
 
+        session = requests.Session()
+        session.cookies = self.__get_cookie_jar("login_blackboard")
+
         url = "https://learn.intl.zju.edu.cn/webapps/portal/dwr_open/call/plaincall/NautilusViewService.getViewInfoWithLimit.dwr"
         data = constants.GET_BB_DUE_ASSIGNMENTS_PAYLOAD.copy()
-        data["httpSessionId"] = self.__JSESSIONID_DUE_ASSIGNMENTS
+        data["httpSessionId"] = session.cookies.get_dict()["JSESSIONID"]
         data["scriptSessionId"] = login_utils.getScriptSessionId()
 
         logger.debug(f"Requesting {url}")
-        resp = self.__session.post(url, data=data)
+        resp = session.post(url, data=data)
         if resp.status_code != 200:
             logger.error(f"Request failed, status code: {resp.status_code}")
             logger.error(resp.text)
             raise Exception(f"Request failed, status code: {resp.status_code}")
-
-        with open("log.html", "w", encoding="utf-8") as f:
-            f.write(resp.text)
 
         # remove empty lines
         lines = list(filter(lambda x: x != "", resp.text.splitlines()))
@@ -203,11 +218,14 @@ class Assistant:
         if not self.__is_blackboard_login:
             raise LoginError("Login to Blackboard failed")
 
+        session = requests.Session()
+        session.cookies = self.__get_cookie_jar("login_blackboard")
+
         url = "https://learn.intl.zju.edu.cn/webapps/streamViewer/streamViewer"
         data = constants.GET_BB_GRADE_PAYLOAD.copy()
 
         logger.debug(f"Requesting {url}")
-        resp = self.__session.post(url, data=data)
+        resp = session.post(url, data=data)
         if resp.status_code != 200:
             logger.error(f"Request failed, status code: {resp.status_code}")
             logger.error(resp.text)
@@ -215,7 +233,7 @@ class Assistant:
         retries = 3
         while resp.json()["sv_moreData"] and retries > 0:
             print("Retrying")
-            resp = self.__session.post(url, data=data)
+            resp = session.post(url, data=data)
             retries -= 1
 
 
@@ -263,10 +281,13 @@ class Assistant:
         if not self.__is_blackboard_login:
             raise LoginError("Login to Blackboard failed")
 
+        session = requests.Session()
+        session.cookies = self.__get_cookie_jar("login_blackboard")
+
         # get JSESSIONID
         logger.debug("Getting JSESSIONID")
         url = "https://learn.intl.zju.edu.cn/webapps/streamViewer/streamViewer?cmd=view&streamName=alerts&globalNavigation=false"
-        resp = self.__session.get(url)
+        resp = session.get(url)
 
         # get announcements
         print("Fetching announcements, this may take a while...")
@@ -274,7 +295,7 @@ class Assistant:
         logger.debug("Getting providers")
         url = "https://learn.intl.zju.edu.cn/webapps/streamViewer/streamViewer"
         data = constants.GET_BB_ANNOUNCEMENTS_PAYLOAD.copy()
-        resp = self.__session.post(url, data=data)
+        resp = session.post(url, data=data)
 
         logger.debug("Updating request data")
         data["prviders"] = resp.json()["sv_providers"][0]
@@ -283,7 +304,7 @@ class Assistant:
         logger.debug("Polling until data is fetched")
         while resp.json()["sv_moreData"]:
             logger.debug("Polling")
-            resp = self.__session.post(url, data=data)
+            resp = session.post(url, data=data)
             time.sleep(1)
         logger.debug("Data fetched")
 
