@@ -27,6 +27,10 @@ Another way is to download pre-built executables from [Actions](https://github.c
 
 For more details, please refer to [wiki](https://github.com/ZJUIntl-share/zjuintl-learning-assistant/wiki) (WIP).
 
+## Development Notes
+
+This project is simply a spider that replay the requests of the browser. Login process of zjuam is based on package capture and reverse engineering of javascript code. However, the analysis of PeopleSoft is too difficult for me. So any help is welcome! I think possible difficulty is the management of cookies.
+
 ## Credits
 
 - [ZJUintl-gRPC](https://github.com/QSCTech/ZJUintl-gRPC)
