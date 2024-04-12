@@ -1,0 +1,62 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+    paths:
+      - '.github/workflows/build.yml'
+      - 'assistant/**'
+      - 'main.py'
+      - 'requirements.txt'
+  workflow_call:
+    
+
+jobs:
+  build:
+    if: github.repository == 'ZJUIntl-share/zjuintl-learning-assistant'
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        arch: [x64]
+        include:
+          - os: macos-latest
+            arch: arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: ${{ matrix.arch }}
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Build Executable
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          nuitka-version: main
+          script-name: main.py
+          onefile: true
+
+      - name: Copy Files
+        run: |
+          mkdir output
+          cp build/main${{ matrix.os == 'windows-latest' && '.exe' || '.bin' }} output/assistant${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: assistant-${{ matrix.os }}-${{ matrix.arch }}
+          path: output/
