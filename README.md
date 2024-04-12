@@ -9,21 +9,23 @@
 
 ## Usage
 
-### module `assistant`
+### main
 
-`assistant` folder is a package that contains a class `Assistant`, which provides abilities shown in [Features](#features). Dependencies are listed in `requirements.txt` in the same folder.
-
-For more details, please refer to [wiki](https://github.com/ZJUIntl-share/zjuintl-learning-assistant/wiki) (WIP).
-
-### main.py
-
-`main.py` is a simple example of how to use `Assistant`. And you can still use it as a useful tool.
+It's a command-line tool that provides the abilities shown in [Features](#features).
 
 Here is the usage of `main.py`:
 
 1. Install dependencies: `pip install -r requirements.txt`
 2. Run `main.py`. For the first time, it will create a `config.yaml` file in the same folder and you should fill your username and password in it. Only zjuam (统一身份认证) is supported now.
 3. Follow the instructions and enjoy!
+
+Another way is to download pre-built executables from [Actions](https://github.com/ZJUIntl-share/zjuintl-learning-assistant/actions). Then you can follow step 2 and 3 above.
+
+### module `assistant`
+
+`assistant` folder is a package that contains a class `Assistant`, which provides abilities shown in [Features](#features). Dependencies are listed in `requirements.txt` in the same folder.
+
+For more details, please refer to [wiki](https://github.com/ZJUIntl-share/zjuintl-learning-assistant/wiki) (WIP).
 
 ## Credits
 
