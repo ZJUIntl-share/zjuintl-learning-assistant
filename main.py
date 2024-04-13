@@ -91,8 +91,9 @@ FUNCTIONS = [
 
 
 if __name__ == "__main__":
-    # logging.basicConfig(level=logging.INFO)
-    # logging.getLogger("assistant").setLevel(logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
+    if os.environ.get("DEBUG"):
+        logging.getLogger("assistant").setLevel(logging.DEBUG)
 
     if not os.path.exists("config.yaml"):
         with open("config.yaml", "w") as f:

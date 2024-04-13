@@ -48,9 +48,13 @@ class Assistant:
         key = inspect.currentframe().f_back.f_code.co_name
         if key not in self.__cookie_jars:
             if base is None:
+                logger.debug(f"{key} cookie jar not found, creating new one")
                 self.__cookie_jars[key] = requests.cookies.RequestsCookieJar()
             else:
+                logger.debug(f"{key} cookie jar not found, copying from {base}")
                 self.__cookie_jars[key] = self.__cookie_jars[base].copy()
+        else:
+            logger.debug(f"{key} cookie jar found")
         return self.__cookie_jars[key]
 
 
