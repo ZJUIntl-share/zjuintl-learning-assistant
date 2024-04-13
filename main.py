@@ -98,15 +98,18 @@ if __name__ == "__main__":
         with open("config.yaml", "w") as f:
             f.write("username: \npassword: \n")
         print("Please fill in your username and password in config.yaml")
+        input("Press Enter to exit ...")
         sys.exit(0)
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
         try:
             if not config["username"] or not config["password"]:
                 print("Please fill in your username and password in config.yaml")
+                input("Press Enter to exit ...")
                 sys.exit(0)
         except KeyError:
             print("Please fill in your username and password in config.yaml")
+            input("Press Enter to exit ...")
             sys.exit(0)
 
     assist = assistant.Assistant(config["username"], config["password"])
