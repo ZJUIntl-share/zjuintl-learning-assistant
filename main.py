@@ -8,11 +8,11 @@ import pandas as pd
 import tabulate
 import bs4
 
-import assistant
+import zjuintl_assistant
 import util
 
 
-def list_due_assignments(assist: assistant.Assistant):
+def list_due_assignments(assist: zjuintl_assistant.Assistant):
     """
     List due assignments
     """
@@ -26,7 +26,7 @@ def list_due_assignments(assist: assistant.Assistant):
         )
     
 
-def list_grades(assist: assistant.Assistant):
+def list_grades(assist: zjuintl_assistant.Assistant):
     """
     List grades
     """
@@ -45,7 +45,7 @@ def list_grades(assist: assistant.Assistant):
         )
 
 
-def list_announcements(assist: assistant.Assistant):
+def list_announcements(assist: zjuintl_assistant.Assistant):
     """
     List announcements
     """
@@ -68,7 +68,7 @@ def list_announcements(assist: assistant.Assistant):
             
 
 
-def quit(_: assistant.Assistant):
+def quit(_: zjuintl_assistant.Assistant):
     """
     Quit
     """
@@ -113,7 +113,7 @@ if __name__ == "__main__":
             input("Press Enter to exit ...")
             sys.exit(0)
 
-    assist = assistant.Assistant(config["username"], config["password"])
+    assist = zjuintl_assistant.Assistant(config["username"], config["password"])
 
     while True:
         print()
