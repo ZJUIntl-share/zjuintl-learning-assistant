@@ -18,12 +18,14 @@ def list_due_assignments(assist: zjuintl_assistant.Assistant):
     """
     items = assist.get_due_assignments()
 
+    table = []
     for item in items:
-        print(
-            str(item.date) + "\t" +
-            item.course + "\t\t" +
+        table.append([
+            str(item.date),
+            item.course.split(":")[0],
             item.title
-        )
+        ])
+    print(tabulate.tabulate(table, headers=["Date", "Course", "Title"], tablefmt='simple_grid', showindex=False))
     
 
 def list_grades(assist: zjuintl_assistant.Assistant):
@@ -34,15 +36,17 @@ def list_grades(assist: zjuintl_assistant.Assistant):
     items = assist.get_bb_grades(20)
 
     print("Showing the last 20 grades")
+    print()
 
+    table = []
     for item in items:
-        print(
-            str(item.date) + "\t" +
-            item.course + "\t\t" +
-            item.title + "\t" +
-            str(item.pointsPossible) + "\t" +
-            item.grade
-        )
+        table.append([
+            str(item.date),
+            item.course.split(":")[0],
+            item.title,
+            f"{item.grade}/{item.pointsPossible}"
+        ])
+    print(tabulate.tabulate(table, headers=["Date", "Course", "Title", "Grade"], tablefmt='simple_grid', showindex=False))
 
 
 def list_announcements(assist: zjuintl_assistant.Assistant):
@@ -53,6 +57,7 @@ def list_announcements(assist: zjuintl_assistant.Assistant):
     items = assist.get_bb_announcements(20)
 
     print("Showing the last 20 announcements")
+    print()
 
     for item in items:
         print(item.date, item.course, item.title)
@@ -64,6 +69,7 @@ def list_announcements(assist: zjuintl_assistant.Assistant):
                 elif element.name == "table":
                     df = pd.read_html(io.StringIO(str(element)))[0]
                     print(tabulate.tabulate(df, tablefmt='simple_grid', showindex=False))
+        print()
         print()
             
 
