@@ -1,0 +1,3 @@
+[submodule "zjuintl_assistant"]
+	path = zjuintl_assistant
+	url = https://github.com/ZJUIntl-share/zjuintl_assistant.git
